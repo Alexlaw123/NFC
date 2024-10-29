@@ -3,11 +3,11 @@ package com.example.nfctool
 import android.app.PendingIntent
 import android.content.Intent
 import android.nfc.NfcAdapter
+import android.nfc.tech.Ndef
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.nfc.NfcEvent
 import android.nfc.Tag
-import android.nfc.tech.Ndef
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -29,6 +29,7 @@ import android.nfc.tech.NfcA
 import android.nfc.tech.MifareClassic
 import java.nio.charset.Charset
 import android.nfc.tech.MifareUltralight
+import android.widget.TextView
 
 
 class MainActivity : ComponentActivity() {
@@ -38,9 +39,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var intentFiltersArray: Array<IntentFilter>
     private lateinit var techListsArray: Array<Array<String>>
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
 
         // Initialize NFC adapter
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
@@ -116,6 +119,7 @@ class MainActivity : ComponentActivity() {
             else if (NfcAdapter.ACTION_TECH_DISCOVERED == action) {
                 Log.d("NFC", "Tech-based tag detected")
                 val tag = it.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
+
                 tag?.let { t -> processTechTag(t) }
             } else {
                 Log.d("NFC", "Unknown NFC action detected")
@@ -127,11 +131,45 @@ class MainActivity : ComponentActivity() {
 
     private fun processNdefTag(tag: Tag) {
         val ndef = Ndef.get(tag)
-        ndef?.let {
-            Log.d("NFC", "NDEF tag found with max size: ${it.maxSize}")
-            // Add your NDEF tag reading logic here
-        } ?: Log.e("NFC", "NDEF is not supported by this tag.")
+        if (ndef != null) {
+            Log.d("NFC", "NDEF tag found")
+            ndef.connect()
+            val ndefMessage = ndef.ndefMessage
+            ndef.close()
+
+            // Process each NDEF record and display it
+            ndefMessage?.let {
+                displayNdefMessage(it)
+            }
+        } else {
+            Log.d("NFC", "NDEF not supported on this tag")
+        }
     }
+
+    private fun displayNdefMessage(ndefMessage: NdefMessage) {
+        val textView = findViewById<TextView>(R.id.textViewNdefContent)
+        val messageBuilder = StringBuilder()
+
+        for (record in ndefMessage.records) {
+            when (record.tnf) {
+                NdefRecord.TNF_WELL_KNOWN -> {
+                    when {
+                        record.type.contentEquals(NdefRecord.RTD_TEXT) -> {
+                            val text = String(record.payload, Charset.forName("UTF-8"))
+                            messageBuilder.append("Text Record: $text\n")
+                        }
+                        record.type.contentEquals(NdefRecord.RTD_URI) -> {
+                            val uri = record.toUri()
+                            messageBuilder.append("URI Record: $uri\n")
+                        }
+                    }
+                }
+            }
+        }
+
+        textView.text = messageBuilder.toString()
+    }
+
 
     private fun processTechTag(tag: Tag) {
         Log.d("NFC", "Tech-based tag detected: ${tag.techList}")
@@ -174,6 +212,10 @@ class MainActivity : ComponentActivity() {
                 val payload = mifareUltralight.readPages(0) // Example to read from page 0
                 Log.d("NFC", "MifareUltralight payload: ${String(payload, Charsets.UTF_8)}")
                 Log.d("NFC", "MifareUltralight UID: ${tag.id.toHexString()}")
+                // 获取TextView
+                    val textViewUid = findViewById<TextView>(R.id.textViewUid)
+                // 设置TextView的文本
+                textViewUid.text = "MifareUltralight UID: ${tag.id.toHexString()}"
             } catch (e: Exception) {
                 Log.e("NFC", "Error reading MifareUltralight tag", e)
             } finally {

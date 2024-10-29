@@ -20,4 +20,18 @@
         android:layout_height="wrap_content"
         android:text="Write NFC" />
 
+    <!-- display UID -->
+    <TextView
+        android:id="@+id/textViewUid"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="UID will be displayed here"
+        android:layout_margin="16dp" />
+    <!-- display NFC content -->
+    <TextView
+        android:id="@+id/textViewNdefContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="NFC Content Will Display Here" />
+
 </LinearLayout>
